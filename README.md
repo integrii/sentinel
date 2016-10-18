@@ -1,2 +1,4 @@
-# sentinel
-Schedule remote web calls with an API call and some JSON.
+# Sentinel
+Schedule remote web calls with an API call.
+
+`go get github.com/integrii/sentinel`
