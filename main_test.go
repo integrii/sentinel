@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/integrii/sentinel/jobRequest"
+	"github.com/integrii/sentinel/jobTypes"
 	"github.com/integrii/sentinel/schedule"
 )
 
@@ -29,6 +30,9 @@ func TestMain(m *testing.M) {
 	// start main as if its normal operation
 	go main()
 
+	// wait one second for listeners to come up
+	<-time.After(1 * time.Second)
+
 	// run tests and exit
 	os.Exit(m.Run())
 }
@@ -38,7 +42,7 @@ func startTestServer() {
 	log.Println("Testing server listening on port", testListenPort)
 	testServer := http.NewServeMux()
 	testServer.HandleFunc("/", testHandler)
-	err := http.ListenAndServe(":"+testListenPort, testServer)
+	err := http.ListenAndServe("127.0.0.1:"+testListenPort, testServer)
 	if err != nil {
 		log.Println("Testing HTTP Server error:", err)
 	}
@@ -47,6 +51,7 @@ func startTestServer() {
 // testHandler handles postbacks that confirm a test ran
 func testHandler(w http.ResponseWriter, req *http.Request) {
 	testPostbacksRecieved++
+	log.Println("Test handler got a postback! #", testPostbacksRecieved)
 }
 
 // TestScheduleJob tests the scheduling and running of a job
@@ -56,20 +61,25 @@ func TestScheduleJob(t *testing.T) {
 	// make a new test job
 	params := make(map[string]string)
 	params["test"] = "true"
-	s := schedule.NewOneTimeSchedule(time.Now())
-	jr := jobRequest.New(params, s)
+	s := schedule.NewOneTimeSchedule(time.Now().Add(time.Second))
+	jr := jobRequest.New("http://localhost:"+testListenPort, params, s)
+	jr.JobType = jobTypes.HTTPPOSTJSON
 
 	// Send a job to the server
-	_, err := jobRequest.OneTimePOST("http://127.0.0.1:"+strconv.Itoa(listenPort), jr)
+	log.Println("Sending sentinel scheduling POST.")
+	resp, err := jobRequest.SendJobRequest("http://127.0.0.1:"+strconv.Itoa(listenPort), jr)
 	if err != nil {
 		fmt.Println("Error when sending one time post to schedule job:", err)
 		t.FailNow()
 	}
+	log.Println("Sentinel scheduling response code:", resp.StatusCode)
+	// responseBody, _ := ioutil.ReadAll(resp.Body)
+	// log.Println("Sentinel scheduling response body:", string(responseBody))
 
 	// wait two seconds and see if a postback came in
 	ticker := time.NewTicker(time.Second * 2)
 	<-ticker.C
-	if !(testPostbacksRecieved > testPostbackRecievedStart+1) {
+	if !(testPostbacksRecieved == testPostbackRecievedStart+1) {
 		t.Fail()
 	}
 }

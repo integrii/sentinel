@@ -42,19 +42,3 @@ func NewTask() Task {
 		Schedule: schedule.Schedule{},
 	}
 }
-
-// UnixTime returns the next unixtime that this task falls under, including this second
-// returns a 0 if this task is dead or in the past only
-func (t *Task) UnixTime() int64 {
-
-	// the current unix time in seconds
-	currentTime := time.Now().Unix()
-
-	// TODO - support reocurring schedules here
-	nextSecond := t.Schedule.Time.Unix()
-	if currentTime > nextSecond {
-		return 0
-	}
-
-	return nextSecond
-}

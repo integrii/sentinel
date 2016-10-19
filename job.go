@@ -5,11 +5,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+
+	"github.com/integrii/sentinel/jobTypes"
 )
 
 // Job represents some command(s) that need run in a task.
 type Job struct {
-	JobType    JobType
+	JobType    jobTypes.Job
 	URL        string
 	Parameters map[string]string
 }
@@ -20,19 +22,21 @@ func (j *Job) Run() error {
 
 	// do different things depending on the job type
 	switch j.JobType {
-	case JOB_HTTPGET:
+	case jobTypes.HTTPGET:
 		// TODO
-	case JOB_HTTPPOSTJSON:
+	case jobTypes.HTTPPOST:
 		// TODO
 		payload := new(bytes.Buffer)
 		_, err = http.Post(j.URL, "application/json; charset=utf-8", payload)
-	case JOB_HTTPPOST:
+	case jobTypes.HTTPPOSTJSON:
 		// add all prams as values to the post
-		var postValues url.Values
+		var postValues = url.Values{}
 		for name, value := range j.Parameters {
 			postValues.Add(name, value)
 		}
-		_, err := http.PostForm(j.URL, postValues)
+		resp, err := http.PostForm(j.URL, postValues)
+		log.Println("Sending values to URL", j.URL, postValues)
+		log.Println("Job run got status code return", resp.StatusCode)
 		if err != nil {
 			log.Println("Had an error when sending POST", err)
 		}

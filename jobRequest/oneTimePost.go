@@ -7,9 +7,8 @@ import (
 	"net/http"
 )
 
-// OneTimePOST sends a single POST request that schedules a call to the specified
-// URL with the specified post parameters at the specified time
-func OneTimePOST(sentinelURL string, jobRequest JobRequest) (*http.Response, error) {
+// SendJobRequest sends a single job request to the sentinel server specified
+func SendJobRequest(sentinelURL string, jobRequest JobRequest) (*http.Response, error) {
 
 	// encode the job request into a slice of bytes
 	b, err := json.Marshal(jobRequest)
