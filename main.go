@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/integrii/sentinel/jobRequest"
 )
@@ -28,8 +30,12 @@ func main() {
 
 // startWebServer starts the web server for incoming api requests
 func startWebServer() {
+	log.Println("Sentinel listening on port", strconv.Itoa(listenPort))
 	http.HandleFunc("/", indexHandler)
-	http.ListenAndServe(":"+string(listenPort), nil)
+	err := http.ListenAndServe(":"+strconv.Itoa(listenPort), nil)
+	if err != nil {
+		log.Println("Error with sentintel web service:", err)
+	}
 }
 
 // indexHandler serves the requests for the root url.
@@ -40,10 +46,11 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 	var err error
 
 	// Read in the body as json and return a 400 if unable to
-	decoder := json.NewDecoder(req.Body)
 	incomingRequest := jobRequest.NewEmpty()
+	decoder := json.NewDecoder(req.Body)
 	err = decoder.Decode(incomingRequest)
 	if err != nil {
+		log.Println("Error decoding job request input:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

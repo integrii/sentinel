@@ -1,16 +1,27 @@
 package jobRequest
 
 import (
+	"bytes"
+	"encoding/json"
+	"log"
 	"net/http"
-	"net/url"
 )
 
 // OneTimePOST sends a single POST request that schedules a call to the specified
 // URL with the specified post parameters at the specified time
 func OneTimePOST(sentinelURL string, jobRequest JobRequest) (*http.Response, error) {
-	var params url.Values
-	for name, value := range jobRequest.Parameters {
-		params.Add(name, value)
+
+	// encode the job request into a slice of bytes
+	b, err := json.Marshal(jobRequest)
+	if err != nil {
+		log.Println("Error sending OneTimePOST", err)
 	}
-	return http.PostForm(sentinelURL, params)
+
+	log.Println("Sending POST body:", string(b))
+
+	// convert bytes to a byte reader
+	body := bytes.NewReader(b)
+
+	// do request and return response and error to caller
+	return http.Post(sentinelURL, "text/plain", body)
 }
