@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 )
 
 var listenPort int
+var listenIP string
 var taskList *TaskList // holds all jobs that need running
 var sentinel Sentinel
 var sigChan chan struct{}
@@ -19,6 +21,7 @@ func init() {
 	flag.IntVar(&listenPort, "port", 80, "Sets the port that the web service listens on.")
 	taskList = NewTaskList()
 	sentinel = Sentinel{}
+	listenIP = "0.0.0.0"
 	sigChan = make(chan struct{})
 }
 
@@ -32,10 +35,31 @@ func main() {
 func startWebServer() {
 	log.Println("Sentinel listening on port", strconv.Itoa(listenPort))
 	http.HandleFunc("/", indexHandler)
-	err := http.ListenAndServe("127.0.0.1:"+strconv.Itoa(listenPort), nil)
+	http.HandleFunc("/delete", deleteHandler)
+	err := http.ListenAndServe(listenIP+":"+strconv.Itoa(listenPort), nil)
 	if err != nil {
 		log.Println("Error with sentintel web service:", err)
 	}
+}
+
+// deleteHandler handles requests for task deletions
+func deleteHandler(w http.ResponseWriter, req *http.Request) {
+	// Fetch the task ID from the body to delete
+	taskID, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		log.Println("Error reading request body for deletion request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err = taskList.RemoveTask(string(taskID))
+	if err != nil {
+		log.Println("Error removing a task", taskID, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+
 }
 
 // indexHandler serves the requests for the root url.
@@ -69,5 +93,6 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 	taskList.AddTask(newTask)
 
 	// return a 200 for successful execution
+	w.Write([]byte(newTask.ID))
 	w.WriteHeader(http.StatusOK)
 }

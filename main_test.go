@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -18,11 +19,17 @@ const testListenPort = "9010"
 
 var testPostbacksRecieved int
 
+var testServerURLRoot string
+var testServerURLDelete string
+
 // Start a sentinel webserver and a test postback endpoint, then
 // run tests that make jobs and check that they triggered.
 func TestMain(m *testing.M) {
 	// test on a random port
 	listenPort = 9009
+	listenIP = "127.0.0.1" // avoids firewall prompts
+	testServerURLRoot = "http://127.0.0.1:" + strconv.Itoa(listenPort)
+	testServerURLDelete = "http://127.0.0.1:" + strconv.Itoa(listenPort) + "/delete"
 
 	// start sentinel test postback web server
 	go startTestServer()
@@ -58,23 +65,12 @@ func testHandler(w http.ResponseWriter, req *http.Request) {
 func TestScheduleJob(t *testing.T) {
 	testPostbackRecievedStart := testPostbacksRecieved
 
-	// make a new test job
-	params := make(map[string]string)
-	params["test"] = "true"
-	s := schedule.NewOneTimeSchedule(time.Now().Add(time.Second))
-	jr := jobRequest.New("http://localhost:"+testListenPort, params, s)
-	jr.JobType = jobTypes.HTTPPOSTJSON
-
-	// Send a job to the server
-	log.Println("Sending sentinel scheduling POST.")
-	resp, err := jobRequest.SendJobRequest("http://127.0.0.1:"+strconv.Itoa(listenPort), jr)
+	jobID, err := makeTestJob()
 	if err != nil {
-		fmt.Println("Error when sending one time post to schedule job:", err)
+		t.Error("Error scheduling test job:", err)
 		t.FailNow()
 	}
-	log.Println("Sentinel scheduling response code:", resp.StatusCode)
-	// responseBody, _ := ioutil.ReadAll(resp.Body)
-	// log.Println("Sentinel scheduling response body:", string(responseBody))
+	log.Println("Made test job with ID", jobID)
 
 	// wait two seconds and see if a postback came in
 	ticker := time.NewTicker(time.Second * 2)
@@ -82,4 +78,53 @@ func TestScheduleJob(t *testing.T) {
 	if !(testPostbacksRecieved == testPostbackRecievedStart+1) {
 		t.Fail()
 	}
+}
+
+// TestDeleteJob creates a job then deletes it
+func TestDeleteJob(t *testing.T) {
+	jobID, err := makeTestJob()
+	if err != nil {
+		t.Error("Error scheduling test job:", err)
+		t.FailNow()
+	}
+	log.Println("Made test job with ID", jobID)
+
+	// delete the job we just made
+	resp, err := jobRequest.Delete(testServerURLDelete, jobID)
+	if err != nil {
+		t.Error("Error when deleting job from server", err)
+		t.FailNow()
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Error("Error when deleting job from server. Server returned non-200")
+		t.FailNow()
+	}
+
+}
+
+// makes a test job and returns the ID of it
+func makeTestJob() (string, error) {
+	var jobID string
+	var err error
+
+	// make a new test job
+	params := make(map[string]string)
+	params["test"] = "true"
+	s := schedule.NewOneTimeSchedule(time.Now().Add(time.Second).Unix())
+	jr := jobRequest.New("http://localhost:"+testListenPort, params, s)
+	jr.JobType = jobTypes.HTTPPOST
+
+	// Send a job to the server
+	log.Println("Sending sentinel scheduling POST.")
+	resp, err := jobRequest.SendJobRequest(testServerURLRoot, jr)
+	if err != nil {
+		fmt.Println("Error when sending one time post to schedule job:", err)
+		return jobID, err
+	}
+	log.Println("Sentinel scheduling response code:", resp.StatusCode)
+	responseBody, _ := ioutil.ReadAll(resp.Body)
+	log.Println("Sentinel scheduling response body:", string(responseBody))
+
+	jobID = string(responseBody)
+	return jobID, err
 }

@@ -20,7 +20,7 @@ func (s *Sentinel) RunForTime(unixTime int64, taskQueue chan<- Task) {
 	// log.Println("Sentinel checking", len(taskList.Tasks), "tasks.")
 	for _, task := range taskList.Tasks {
 		// TODO - support reocurring timelines here and not just a single time
-		if task.Schedule.Time.Unix() == unixTime {
+		if task.Schedule.Time == unixTime {
 			taskQueue <- task
 		}
 	}

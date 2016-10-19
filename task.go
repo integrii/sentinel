@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/home-ai/util"
 	"github.com/integrii/sentinel/schedule"
 )
 
@@ -14,6 +15,7 @@ type Task struct {
 	Job       Job               // the job to run
 	Schedule  schedule.Schedule // the times this task should run
 	LastRanAt int64             // the last time this task ran in unix time
+	ID        string            // the unique id of this task
 	// TODO - capture output of all runs
 }
 
@@ -40,5 +42,6 @@ func NewTask() Task {
 	return Task{
 		Job:      NewJob(),
 		Schedule: schedule.Schedule{},
+		ID:       util.RandomString(10),
 	}
 }

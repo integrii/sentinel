@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"log"
 	"net/http"
 	"net/url"
@@ -25,10 +24,6 @@ func (j *Job) Run() error {
 	case jobTypes.HTTPGET:
 		// TODO
 	case jobTypes.HTTPPOST:
-		// TODO
-		payload := new(bytes.Buffer)
-		_, err = http.Post(j.URL, "application/json; charset=utf-8", payload)
-	case jobTypes.HTTPPOSTJSON:
 		// add all prams as values to the post
 		var postValues = url.Values{}
 		for name, value := range j.Parameters {

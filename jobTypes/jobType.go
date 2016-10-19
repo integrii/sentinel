@@ -5,4 +5,3 @@ type Job string
 
 const HTTPGET = Job("HTTPGET")
 const HTTPPOST = Job("HTTPPOST")
-const HTTPPOSTJSON = Job("HTTPPOSTJSON")

@@ -1,11 +1,9 @@
 // Package schedule implements a schedule used by sentinel tasks
 package schedule
 
-import "time"
-
 // Schedule is a set of times in which a task should run.
 type Schedule struct {
-	Time               time.Time
+	Time               int64 // unixtime
 	RepeatSeconds      []int
 	RepeatMinutes      []int
 	RepeatHours        []int
@@ -17,9 +15,9 @@ type Schedule struct {
 
 // NewOneTimeSchedule returns a new schedule that runs only once
 // at the specified time
-func NewOneTimeSchedule(t time.Time) Schedule {
+func NewOneTimeSchedule(unixTime int64) Schedule {
 	s := New()
-	s.Time = t
+	s.Time = unixTime
 	return s
 }
 
